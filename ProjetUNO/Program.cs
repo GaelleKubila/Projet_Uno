@@ -5,6 +5,8 @@ namespace ProjetUNO
     internal class Program
     {
 
+        public static Random rand = new Random();
+
         public class carte
         {
             int numero;
@@ -36,8 +38,6 @@ namespace ProjetUNO
 
                 int[] nombres2 = { 11, 12 };
                 int nombre_index;
-
-                Random rand = new Random();
 
                 int type_index = rand.Next(types.Length);
 
@@ -98,14 +98,14 @@ namespace ProjetUNO
 
                 {
 
-                    Console.WriteLine($"La carte est {couleur} et de numero {numero}");
+                    Console.WriteLine($"Carte {couleur} numero {numero}");
 
                 }
 
                 else
 
                 {
-                    Console.WriteLine($"La carte est {couleur} et de type {special[numero - 10]}");
+                    Console.WriteLine($"Carte {couleur} type {special[numero - 10]}");
                 }
 
             }
@@ -174,11 +174,12 @@ namespace ProjetUNO
 
                 for (int i = 0; i < nbcartes; i++)
                 {
+                    Console.Write($"N°{i + 1} - ");
                     collectioncartes[i].affiche();
                 }
             }
 
-            public void pioche()
+            public bool pioche()
             {
 
                 bool choixpioche = pioche_ou_non();
@@ -189,7 +190,59 @@ namespace ProjetUNO
                     nbcartes++;
                     collectioncartes[nbcartes] = new carte();
 
+                    Console.WriteLine($"Vous avez désormais {nbcartes} cartes");
+                    collectioncartes[nbcartes].affiche();
+
                 }
+
+                return choixpioche;
+            }
+
+            public void plus_deuxouquatre(int nb)
+            {
+                Console.WriteLine($"Joueur {ID} : vous venez de prendre un +{nb}!");
+                Console.WriteLine("Voici vos cartes supplementaires");
+
+                int i;
+
+                for (i=0; i<nb; i++)
+                {
+                    nbcartes++;
+                    collectioncartes[nbcartes-1] = new carte();
+                    collectioncartes[nbcartes-1].affiche();
+
+                }
+
+                Console.WriteLine($"Vous avez désormais {nbcartes} cartes");
+
+            }
+
+            public void retire(carte a_retirer)
+            {
+                int i = 0;
+
+                while (i < nbcartes && collectioncartes[i]!= a_retirer)
+                {
+                    if (collectioncartes[i] != a_retirer)
+                    {
+                        i++;
+                    }
+
+                }
+
+                while(i < nbcartes-1)
+                {
+                    collectioncartes[i] = collectioncartes[i + 1];
+                    i++;
+                }
+
+                nbcartes--;
+
+            }
+
+            public carte dernierecartedudeck()
+            {
+                return collectioncartes[nbcartes];
             }
 
             public carte choix_carte()
@@ -220,7 +273,7 @@ namespace ProjetUNO
                     }
                     else
                     {
-                        Console.WriteLine("Vous avez choisi une carte!");
+                        Console.Write("Vous avez choisi une carte : ");
                         jeu_valide = true;
 
                     }
@@ -251,12 +304,103 @@ namespace ProjetUNO
 
             carte carte_dessus = new carte();
 
-            switch (tour_id)
+            Console.Write("La première carte est la suivante : ");
+            carte_dessus.affiche();
+
+            while(true)
             {
-                case 0: break;
-                default: break;
+
+                bool premiere_pioche = false;
+                bool seconde_pioche = false;
+
+                Console.Write("Derniere carte posee : ");
+                carte_dessus.affiche();
+
+                carte carte_choisie = liste_joueurs[tour_id].choix_carte();
+
+                carte_choisie.affiche();
+
+                premiere_pioche = posecarte(ref carte_dessus, ref carte_choisie);
+
+                if (!premiere_pioche)
+                {
+                    bool piocherdeuxfois = liste_joueurs[tour_id].pioche();
+
+                    if (piocherdeuxfois)
+                    {
+                        carte_choisie = liste_joueurs[tour_id].dernierecartedudeck();
+                        seconde_pioche = posecarte(ref carte_dessus, ref carte_choisie);
+                    }
+                }
+
+                if (premiere_pioche || seconde_pioche)
+                {
+                    liste_joueurs[tour_id].retire(carte_choisie);
+                }
+
+                if (liste_joueurs[tour_id].Nbcartes == 0)
+                {
+                    break;
+                }
+
+                if (liste_joueurs[tour_id].Nbcartes == 1)
+                {
+                    Console.WriteLine("Uno!");
+                }
+
+                if (carte_choisie.Numero == 12 || carte_choisie.Numero == 11)
+                {
+                    string couleur;
+
+                    do
+                    {
+
+
+                        Console.WriteLine($"Joueur {tour_id+1}, quelle couleur voulez vous mettre?");
+
+                        try
+                        {
+                            couleur = Console.ReadLine();
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e.Message);
+                            couleur = "Rouge";
+                        }
+                    }
+                    while (couleur != "Rouge" && couleur != "Vert" && couleur != "Bleu" && couleur != "Jaune");
+
+                    carte changement_couleur = new carte(0, couleur);
+                    carte_dessus = changement_couleur;
+
+                }
+
+                tour_id++;
+
+                if (tour_id >= nb_joueurs)
+                {
+                    tour_id = 0;
+                }
+
+                Console.WriteLine("Tour terminé");
+                Console.WriteLine("_____________________");
+
+                if (carte_choisie.Numero == 10)
+                {
+                    liste_joueurs[tour_id].plus_deuxouquatre(2);
+                }
+
+                if (carte_choisie.Numero == 11)
+                {
+                    liste_joueurs[tour_id].plus_deuxouquatre(4);
+                }
+
+
+                    
             }
 
+            Console.WriteLine("Bon la victoire n'est pas encore codée mais on s'est compris");
+            Console.WriteLine($"Le joueur {tour_id+1} est le grand gagnant");
 
 
         }
@@ -264,12 +408,8 @@ namespace ProjetUNO
         public static bool posecarte(ref carte dernierecarte, ref carte macarte)
         {
 
-            if ((macarte.Couleur == "Special" && dernierecarte.Numero != 11) || (macarte.Numero == 11) || (macarte.Couleur != "Special" && macarte.Couleur == dernierecarte.Couleur) || (macarte.Numero == dernierecarte.Numero))
+            if ((dernierecarte.Couleur == "Special") || (macarte.Couleur == "Special" && dernierecarte.Numero != 11) || (macarte.Numero == 11) || (macarte.Couleur != "Special" && macarte.Couleur == dernierecarte.Couleur) || (macarte.Numero == dernierecarte.Numero))
             {
-                Console.WriteLine("Votre carte :");
-                macarte.affiche();
-                Console.WriteLine("La dernière carte en jeu :");
-                dernierecarte.affiche();
                 Console.WriteLine("Vous avez pu poser votre carte!");
                 dernierecarte = macarte;
                 return true;
@@ -277,10 +417,7 @@ namespace ProjetUNO
 
             else
             {
-                Console.WriteLine("Votre carte :");
-                macarte.affiche();
-                Console.WriteLine("La dernière carte en jeu :");
-                dernierecarte.affiche();
+
                 Console.WriteLine("Votre carte ne correspond pas!");
                 return false;
 
@@ -314,21 +451,6 @@ namespace ProjetUNO
 
         public static void Main(string[] args)
         {
-            /*carte cartedeck = new carte();
-            carte carteactuelle = new carte();
-
-            bool res = posecarte(ref cartedeck, ref carteactuelle);
-            bool rejoue;
-
-            Console.WriteLine(res);
-
-            if (res == false)
-            {
-                rejoue = pioche_ou_non();
-                carteactuelle.regeneration();
-                res = posecarte(ref cartedeck, ref carteactuelle);
-            }*/
-
 
             joueur J1 = new joueur();
             joueur J2 = new joueur();
@@ -339,12 +461,7 @@ namespace ProjetUNO
 
             carte depart = new carte();
 
-            carte carte_res = J1.choix_carte();
-
-            carte_res.affiche();
-
-            bool res = posecarte(ref depart, ref carte_res);
-
+            boucle_jeu(totaljoueurs.Length, totaljoueurs);
         }
     }
 }
